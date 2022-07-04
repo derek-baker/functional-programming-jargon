@@ -2,7 +2,7 @@
 
 Functional programming (FP) provides many advantages, and its popularity has been increasing as a result. However, each programming paradigm comes with its own unique jargon and FP is no exception. By providing a glossary, we hope to make learning FP easier.
 
-Examples are presented in JavaScript (ES2015). [Why JavaScript?](https://github.com/hemanth/functional-programming-jargon/wiki/Why-JavaScript%3F)
+Examples are presented in F#. [Why F#](https://fsharpforfunandprofit.com/why-use-fsharp/)
 
 Where applicable, this document uses terms defined in the [Fantasy Land spec](https://github.com/fantasyland/fantasy-land)
 
@@ -18,6 +18,7 @@ __Translations__
 * [Polish](https://github.com/Deloryn/functional-programming-jargon)
 * [Haskell Turkish](https://github.com/mrtkp9993/functional-programming-jargon)
 * [Haskell Russian](https://github.com/epogrebnyak/functional-programming-jargon)
+* [F-#](https://github.com/derek-baker/functional-programming-jargon)
 
 __Table of Contents__
 <!-- RM(noparent,notop) -->
@@ -38,10 +39,10 @@ __Table of Contents__
 * [Contracts](#contracts)
 * [Category](#category)
 * [Value](#value)
-* [Constant](#constant)
-  * [Constant Function](#constant-function)
-  * [Constant Functor](#constant-functor)
-  * [Constant Monad](#constant-monad)
+* [letant](#letant)
+  * [letant Function](#letant-function)
+  * [letant Functor](#letant-functor)
+  * [letant Monad](#letant-monad)
 * [Functor](#functor)
 * [Pointed Functor](#pointed-functor)
 * [Lift](#lift)
@@ -83,12 +84,14 @@ __Table of Contents__
 
 The number of arguments a function takes. From words like unary, binary, ternary, etc. 
 
-```js
-const sum = (a, b) => a + b
+```fs
+let sum = fun a b -> a + b 
 // The arity of sum is 2 (binary)
-const inc = a => a + 1
+
+let inc = fun a -> a + 1
 // The arity of inc is 1 (unary)
-const zero = () => 0
+
+let zero = fun _ -> 0
 // The arity of zero is 0 (nullary)
 ```
 
@@ -100,16 +103,17 @@ __Further reading__
 
 A function which takes a function as an argument and/or returns a function.
 
-```js
-const filter = (predicate, xs) => xs.filter(predicate)
-```
+```fs
+let filter predicate list: list<int> = 
+    list |> List.filter predicate
 
-```js
-const is = (type) => (x) => Object(x) instanceof type
-```
+let isEven = fun x -> 
+    match x with 
+    | _ when x % 2 = 0 -> true
+    | _  -> false
 
-```js
-filter(is(Number), [0, '1', 2, null]) // [0, 2]
+let evenList = filter isEven [0; 1; 2;]   
+printfn $"{evenList}" // [0, 2]
 ```
 
 ## Closure
@@ -118,10 +122,10 @@ A closure is a scope which captures local variables of a function for access eve
 This allows the values in the closure to be accessed by returned functions.
 
 
-```js
-const addTo = x => y => x + y
-var addToFive = addTo(5)
-addToFive(3) // => 8
+```fs
+let five = 5
+let addToFive x = x + five
+addToFive 3 // => 8
 ```
 
 In this case the `x` is retained in `addToFive`'s closure with the value `5`. `addToFive` can then be called with the `y`
@@ -135,28 +139,28 @@ __Further reading/Sources__
 
 Partially applying a function means creating a new function by pre-filling some of the arguments to the original function.
 
-```js
+```fs
 // Helper to create partially applied functions
 // Takes a function and some arguments
-const partial = (f, ...args) =>
+let partial = (f, ...args) =>
   // returns a function that takes the rest of the arguments
   (...moreArgs) =>
     // and calls the original function with all of them
     f(...args, ...moreArgs)
 
 // Something to apply
-const add3 = (a, b, c) => a + b + c
+let add3 = (a, b, c) => a + b + c
 
 // Partially applying `2` and `3` to `add3` gives you a one-argument function
-const fivePlus = partial(add3, 2, 3) // (c) => 2 + 3 + c
+let fivePlus = partial(add3, 2, 3) // (c) => 2 + 3 + c
 
 fivePlus(4) // 9
 ```
 
 You can also use `Function.prototype.bind` to partially apply a function in JS:
 
-```js
-const add1More = add3.bind(null, 2, 3) // (c) => 2 + 3 + c
+```fs
+let add1More = add3.bind(null, 2, 3) // (c) => 2 + 3 + c
 ```
 
 Partial application helps create simpler functions from more complex ones by baking in data when you have it. [Curried](#currying) functions are automatically partially applied.
@@ -168,14 +172,14 @@ The process of converting a function that takes multiple arguments into a functi
 
 Each time the function is called it only accepts one argument and returns a function that takes one argument until all arguments are passed.
 
-```js
-const sum = (a, b) => a + b
+```fs
+let sum = (a, b) => a + b
 
-const curriedSum = (a) => (b) => a + b
+let curriedSum = (a) => (b) => a + b
 
 curriedSum(40)(2) // 42.
 
-const add2 = curriedSum(2) // (b) => 2 + b
+let add2 = curriedSum(2) // (b) => 2 + b
 
 add2(10) // 12
 
@@ -186,10 +190,10 @@ Transforming a function that takes multiple arguments into one that if given les
 
 lodash & Ramda have a `curry` function that works this way.
 
-```js
-const add = (x, y) => x + y
+```fs
+let add = (x, y) => x + y
 
-const curriedAdd = _.curry(add)
+let curriedAdd = _.curry(add)
 curriedAdd(1, 2) // 3
 curriedAdd(1) // (y) => 1 + y
 curriedAdd(1)(2) // 3
@@ -203,9 +207,9 @@ __Further reading__
 
 The act of putting two functions together to form a third function where the output of one function is the input of the other. This is one of the most important ideas of functional programming.
 
-```js
-const compose = (f, g) => (a) => f(g(a)) // Definition
-const floorAndToString = compose((val) => val.toString(), Math.floor) // Usage
+```fs
+let compose = (f, g) => (a) => f(g(a)) // Definition
+let floorAndToString = compose((val) => val.toString(), Math.floor) // Usage
 floorAndToString(121.212121) // '121'
 ```
 
@@ -213,11 +217,11 @@ floorAndToString(121.212121) // '121'
 
 At any given point in a program, the part of the code that's yet to be executed is known as a continuation.
 
-```js
-const printAsString = (num) => console.log(`Given ${num}`)
+```fs
+let printAsString = (num) => console.log(`Given ${num}`)
 
-const addOneAndContinue = (num, cc) => {
-  const result = num + 1
+let addOneAndContinue = (num, cc) => {
+  let result = num + 1
   cc(result)
 }
 
@@ -226,8 +230,8 @@ addOneAndContinue(2, printAsString) // 'Given 3'
 
 Continuations are often seen in asynchronous programming when the program needs to wait to receive data before it can continue. The response is often passed off to the rest of the program, which is the continuation, once it's been received.
 
-```js
-const continueProgramWith = (data) => {
+```fs
+let continueProgramWith = (data) => {
   // Continues program with data
 }
 
@@ -244,28 +248,28 @@ readFileAsync('path/to/file', (err, response) => {
 
 A function is pure if the return value is only determined by its input values, and does not produce side effects. The function must always return the same result when given the same input.
 
-```js
-const greet = (name) => `Hi, ${name}`
+```fs
+let greet = (name) => `Hi, ${name}`
 
 greet('Brianne') // 'Hi, Brianne'
 ```
 
 As opposed to each of the following:
 
-```js
+```fs
 window.name = 'Brianne'
 
-const greet = () => `Hi, ${window.name}`
+let greet = () => `Hi, ${window.name}`
 
 greet() // "Hi, Brianne"
 ```
 
 The above example's output is based on data stored outside of the function...
 
-```js
+```fs
 let greeting
 
-const greet = (name) => {
+let greet = (name) => {
   greeting = `Hi, ${name}`
 }
 
@@ -279,11 +283,11 @@ greeting // "Hi, Brianne"
 
 A function or expression is said to have a side effect if apart from returning a value, it interacts with (reads from or writes to) external mutable state.
 
-```js
-const differentEveryTime = new Date()
+```fs
+let differentEveryTime = new Date()
 ```
 
-```js
+```fs
 console.log('IO is a side effect!')
 ```
 
@@ -291,11 +295,11 @@ console.log('IO is a side effect!')
 
 A function is idempotent if reapplying it to its result does not produce a different result.
 
-```js
+```fs
 Math.abs(Math.abs(10))
 ```
 
-```js
+```fs
 sort(sort(sort([2, 1])))
 ```
 
@@ -303,18 +307,18 @@ sort(sort(sort([2, 1])))
 
 Writing functions where the definition does not explicitly identify the arguments used. This style usually requires [currying](#currying) or other [Higher-Order functions](#higher-order-functions-hof). A.K.A Tacit programming.
 
-```js
+```fs
 // Given
-const map = (fn) => (list) => list.map(fn)
-const add = (a) => (b) => a + b
+let map = (fn) => (list) => list.map(fn)
+let add = (a) => (b) => a + b
 
 // Then
 
 // Not point-free - `numbers` is an explicit argument
-const incrementAll = (numbers) => map(add(1))(numbers)
+let incrementAll = (numbers) => map(add(1))(numbers)
 
 // Point-free - The list is an implicit argument
-const incrementAll2 = map(add(1))
+let incrementAll2 = map(add(1))
 ```
 
 Point-free function definitions look just like normal assignments without `function` or `=>`. It's worth mentioning that point-free functions are not necessarily better than their counterparts, as they can be more difficult to understand when complex.
@@ -322,8 +326,8 @@ Point-free function definitions look just like normal assignments without `funct
 ## Predicate
 A predicate is a function that returns true or false for a given value. A common use of a predicate is as the callback for array filter.
 
-```js
-const predicate = (a) => a > 2
+```fs
+let predicate = (a) => a > 2
 
 ;[1, 2, 3, 4].filter(predicate) // [3, 4]
 ```
@@ -332,14 +336,14 @@ const predicate = (a) => a > 2
 
 A contract specifies the obligations and guarantees of the behavior from a function or expression at runtime. This acts as a set of rules that are expected from the input and output of a function or expression, and errors are generally reported whenever a contract is violated.
 
-```js
+```fs
 // Define our contract : int -> boolean
-const contract = (input) => {
+let contract = (input) => {
   if (typeof input === 'number') return true
   throw new Error('Contract violated: expected int -> boolean')
 }
 
-const addOne = (num) => contract(num) && num + 1
+let addOne = (num) => contract(num) && num + 1
 
 addOne(2) // 3
 addOne('some string') // Contract violated: expected int -> boolean
@@ -365,10 +369,10 @@ To be a valid category 3 rules must be met:
 Since these rules govern composition at very abstract level, category theory is great at uncovering new ways of composing things.
 
 As an example we can define a category Max as a class
-```js
+```fs
 
 class Max {
-  constructor (a) {
+  letructor (a) {
     this.a = a
   }
   id () {
@@ -393,7 +397,7 @@ __Further reading__
 
 Anything that can be assigned to a variable.
 
-```js
+```fs
 5
 Object.freeze({name: 'John', age: 30}) // The `freeze` function enforces immutability.
 ;(a) => a
@@ -401,47 +405,47 @@ Object.freeze({name: 'John', age: 30}) // The `freeze` function enforces immutab
 undefined
 ```
 
-## Constant
+## letant
 
 A variable that cannot be reassigned once defined.
 
-```js
-const five = 5
-const john = Object.freeze({name: 'John', age: 30})
+```fs
+let five = 5
+let john = Object.freeze({name: 'John', age: 30})
 ```
 
-Constants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
+letants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
 
-With the above two constants the following expression will always return `true`.
+With the above two letants the following expression will always return `true`.
 
-```js
+```fs
 john.age + five === ({name: 'John', age: 30}).age + (5)
 ```
 
-### Constant Function
+### letant Function
 
 A [curried](#currying) function that ignores its second argument:
 
-```js
-const constant = a => () => a
+```fs
+let letant = a => () => a
 
-;[1, 2].map(constant(0)) // => [0, 0]
+;[1, 2].map(letant(0)) // => [0, 0]
 ```
 
-### Constant Functor
+### letant Functor
 
 Object whose `map` doesn't transform the contents. See [Functor](#functor)
 
-```js
-  Constant(1).map(n => n + 1) // => Constant(1)
+```fs
+  letant(1).map(n => n + 1) // => letant(1)
 ```
 
-### Constant Monad
+### letant Monad
 
 Object whose `chain` doesn't transform the contents. See [Monad](#monad)
 
-```js
-  Constant(1).chain(n => Constant(n + 1)) // => Constant(1)
+```fs
+  letant(1).chain(n => letant(n + 1)) // => letant(1)
 ```
 
 ## Functor
@@ -463,15 +467,15 @@ object.map(compose(f, g)) ≍ object.map(g).map(f)
 
 A common functor in JavaScript is `Array` since it abides to the two functor rules:
 
-```js
+```fs
 ;[1, 2, 3].map(x => x) // = [1, 2, 3]
 ```
 
 and
 
-```js
-const f = x => x + 1
-const g = x => x * 2
+```fs
+let f = x => x + 1
+let g = x => x * 2
 
 ;[1, 2, 3].map(x => f(g(x))) // = [3, 5, 7]
 ;[1, 2, 3].map(g).map(f) // = [3, 5, 7]
@@ -482,7 +486,7 @@ An object with an `of` function that puts _any_ single value into it.
 
 ES2015 adds `Array.of` making arrays a pointed functor.
 
-```js
+```fs
 Array.of(1) // [1]
 ```
 
@@ -492,12 +496,12 @@ Lifting is when you take a value and put it into an object like a [functor](#poi
 
 Some implementations have a function called `lift`, or `liftA2` to make it easier to run functions on functors.
 
-```js
-const liftA2 = (f) => (a, b) => a.map(f).ap(b) // note it's `ap` and not `map`.
+```fs
+let liftA2 = (f) => (a, b) => a.map(f).ap(b) // note it's `ap` and not `map`.
 
-const mult = a => b => a * b
+let mult = a => b => a * b
 
-const liftedMult = liftA2(mult) // this function now works on functors like array
+let liftedMult = liftA2(mult) // this function now works on functors like array
 
 liftedMult([1, 2], [3]) // [3, 6]
 liftA2(a => b => a + b)([1, 2], [3, 4]) // [4, 5, 5, 6]
@@ -505,8 +509,8 @@ liftA2(a => b => a + b)([1, 2], [3, 4]) // [4, 5, 5, 6]
 
 Lifting a one-argument function and applying it does the same thing as `map`.
 
-```js
-const increment = (x) => x + 1
+```fs
+let increment = (x) => x + 1
 
 lift(increment)([2]) // [3]
 ;[2].map(increment) // [3]
@@ -514,7 +518,7 @@ lift(increment)([2]) // [3]
 
 Lifting simple values can be simply creating the object.
 
-```js
+```fs
 Array.of(1) // => [1]
 ```
 
@@ -526,8 +530,8 @@ behavior of the program is said to be referentially transparent.
 
 Given the function greet:
 
-```js
-const greet = () => 'Hello World!'
+```fs
+let greet = () => 'Hello World!'
 ```
 
 Any invocation of `greet()` can be replaced with `Hello World!` hence greet is
@@ -541,9 +545,9 @@ When an application is composed of expressions and devoid of side effects,
 truths about the system can be derived from the parts. You can also be confident
 about details of your system without having to go through every function.
 
-```js
-const grainToDogs = compose(chickenIntoDogs, grainIntoChicken)
-const grainToCats = compose(dogsIntoCats, grainToDogs)
+```fs
+let grainToDogs = compose(chickenIntoDogs, grainIntoChicken)
+let grainToCats = compose(dogsIntoCats, grainToDogs)
 ```
 In the example above, if you know that `chickenIntoDogs` and `grainIntoChicken`
 are pure then you know that the composition is pure. This can be taken further
@@ -553,7 +557,7 @@ when more is known about the functions (associative, communtative, idempotent, e
 
 An anonymous function that can be treated like a value.
 
-```js
+```fs
 ;(function (a) {
   return a + 1
 })
@@ -562,14 +566,14 @@ An anonymous function that can be treated like a value.
 ```
 Lambdas are often passed as arguments to Higher-Order functions.
 
-```js
+```fs
 ;[1, 2].map((a) => a + 1) // [2, 3]
 ```
 
 You can assign a lambda to a variable.
 
-```js
-const add1 = (a) => a + 1
+```fs
+let add1 = (a) => a + 1
 ```
 
 ## Lambda Calculus
@@ -579,16 +583,16 @@ A branch of mathematics that uses functions to create a [universal model of comp
 
 Lazy evaluation is a call-by-need evaluation mechanism that delays the evaluation of an expression until its value is needed. In functional languages, this allows for structures like infinite lists, which would not normally be available in an imperative language where the sequencing of commands is significant.
 
-```js
-const rand = function*() {
+```fs
+let rand = function*() {
   while (1 < 2) {
     yield Math.random()
   }
 }
 ```
 
-```js
-const randIter = rand()
+```fs
+let randIter = rand()
 randIter.next() // Each execution gives a random value, expression is evaluated on need.
 ```
 
@@ -598,7 +602,7 @@ An object with a function that "combines" that object with another of the same t
 
 One simple monoid is the addition of numbers:
 
-```js
+```fs
 1 + 1 // 2
 ```
 In this case number is the object and `+` is the function.
@@ -606,7 +610,7 @@ In this case number is the object and `+` is the function.
 When any value is combined with the "identity" value the result must be the original value. The identity must also be commutative.
 
 The identity value for addition is `0`.
-```js
+```fs
 1 + 0 // 1
 0 + 1 // 1
 1 + 0 === 0 + 1
@@ -614,25 +618,25 @@ The identity value for addition is `0`.
 
 It's also required that the grouping of operations will not affect the result (associativity):
 
-```js
+```fs
 1 + (2 + 3) === (1 + 2) + 3 // true
 ```
 
 Array concatenation also forms a monoid:
 
-```js
+```fs
 ;[1, 2].concat([3, 4]) // [1, 2, 3, 4]
 ```
 
 The identity value is empty array `[]`
 
-```js
+```fs
 ;[1, 2].concat([]) // [1, 2]
 ```
 
 As a counterexample, subtraction does not form a monoid because there is no commutative identity value:
 
-```js
+```fs
 0 - 4 === 4 - 0 // false
 ```
 
@@ -640,7 +644,7 @@ As a counterexample, subtraction does not form a monoid because there is no comm
 
 A monad is an object with [`of`](#pointed-functor) and `chain` functions. `chain` is like [`map`](#functor) except it un-nests the resulting nested object.
 
-```js
+```fs
 // Implementation
 Array.prototype.chain = function (f) {
   return this.reduce((acc, it) => acc.concat(f(it)), [])
@@ -660,8 +664,8 @@ Array.of('cat,dog', 'fish,bird').map((a) => a.split(',')) // [['cat', 'dog'], ['
 
 An object that has `extract` and `extend` functions.
 
-```js
-const CoIdentity = (v) => ({
+```fs
+let CoIdentity = (v) => ({
   val: v,
   extract () {
     return this.val
@@ -674,13 +678,13 @@ const CoIdentity = (v) => ({
 
 Extract takes a value out of a functor.
 
-```js
+```fs
 CoIdentity(1).extract() // 1
 ```
 
 Extend runs a function on the comonad. The function should return the same type as the comonad.
 
-```js
+```fs
 CoIdentity(1).extend((co) => co.extract() + 1) // CoIdentity(2)
 ```
 
@@ -688,7 +692,7 @@ CoIdentity(1).extend((co) => co.extract() + 1) // CoIdentity(2)
 
 An applicative functor is an object with an `ap` function. `ap` applies a function in the object to a value in another object of the same type.
 
-```js
+```fs
 // Implementation
 Array.prototype.ap = function (xs) {
   return this.reduce((acc, f) => acc.concat(xs.map(f)), [])
@@ -700,20 +704,20 @@ Array.prototype.ap = function (xs) {
 
 This is useful if you have two objects and you want to apply a binary function to their contents.
 
-```js
+```fs
 // Arrays that you want to combine
-const arg1 = [1, 3]
-const arg2 = [4, 5]
+let arg1 = [1, 3]
+let arg2 = [4, 5]
 
 // combining function - must be curried for this to work
-const add = (x) => (y) => x + y
+let add = (x) => (y) => x + y
 
-const partiallyAppliedAdds = [add].ap(arg1) // [(y) => 1 + y, (y) => 3 + y]
+let partiallyAppliedAdds = [add].ap(arg1) // [(y) => 1 + y, (y) => 3 + y]
 ```
 
 This gives you an array of functions that you can call `ap` on to get the result:
 
-```js
+```fs
 partiallyAppliedAdds.ap(arg2) // [5, 6, 7, 8]
 ```
 
@@ -725,12 +729,12 @@ A transformation function.
 
 A function where the input type is the same as the output.
 
-```js
+```fs
 // uppercase :: String -> String
-const uppercase = (str) => str.toUpperCase()
+let uppercase = (str) => str.toUpperCase()
 
 // decrement :: Number -> Number
-const decrement = (x) => x - 1
+let decrement = (x) => x - 1
 ```
 
 ### Isomorphism
@@ -739,11 +743,11 @@ A pair of transformations between 2 types of objects that is structural in natur
 
 For example, 2D coordinates could be stored as an array `[2,3]` or object `{x: 2, y: 3}`.
 
-```js
+```fs
 // Providing functions to convert in both directions makes them isomorphic.
-const pairToCoords = (pair) => ({x: pair[0], y: pair[1]})
+let pairToCoords = (pair) => ({x: pair[0], y: pair[1]})
 
-const coordsToPair = (coords) => [coords.x, coords.y]
+let coordsToPair = (coords) => [coords.x, coords.y]
 
 coordsToPair(pairToCoords([1, 2])) // [1, 2]
 
@@ -754,7 +758,7 @@ pairToCoords(coordsToPair({x: 1, y: 2})) // {x: 1, y: 2}
 
 A homomorphism is just a structure preserving map. In fact, a functor is just a homomorphism between categories as it preserves the original category's structure under the mapping.
 
-```js
+```fs
 A.of(f).ap(A.of(x)) == A.of(f(x))
 
 Either.of(_.toUpper).ap(Either.of('oreos')) == Either.of(_.toUpper('oreos'))
@@ -764,8 +768,8 @@ Either.of(_.toUpper).ap(Either.of('oreos')) == Either.of(_.toUpper('oreos'))
 
 A `reduceRight` function that applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
 
-```js
-const sum = xs => xs.reduceRight((acc, x) => acc + x, 0)
+```fs
+let sum = xs => xs.reduceRight((acc, x) => acc + x, 0)
 
 sum([1, 2, 3, 4, 5]) // 15
 ```
@@ -774,18 +778,18 @@ sum([1, 2, 3, 4, 5]) // 15
 
 An `unfold` function. An `unfold` is the opposite of `fold` (`reduce`). It generates a list from a single value.
 
-```js
-const unfold = (f, seed) => {
+```fs
+let unfold = (f, seed) => {
   function go (f, seed, acc) {
-    const res = f(seed)
+    let res = f(seed)
     return res ? go(f, res[1], acc.concat([res[0]])) : acc
   }
   return go(f, seed, [])
 }
 ```
 
-```js
-const countDown = n => unfold((n) => {
+```fs
+let countDown = n => unfold((n) => {
   return n <= 0 ? undefined : [n, n - 1]
 }, n)
 
@@ -802,19 +806,19 @@ A function just like `reduceRight`. However, there's a difference:
 
 In paramorphism, your reducer's arguments are the current value, the reduction of all previous values, and the list of values that formed that reduction.
 
-```js
+```fs
 // Obviously not safe for lists containing `undefined`,
 // but good enough to make the point.
-const para = (reducer, accumulator, elements) => {
+let para = (reducer, accumulator, elements) => {
   if (elements.length === 0) { return accumulator }
 
-  const head = elements[0]
-  const tail = elements.slice(1)
+  let head = elements[0]
+  let tail = elements.slice(1)
 
   return reducer(head, tail, para(reducer, accumulator, tail))
 }
 
-const suffixes = list => para(
+let suffixes = list => para(
   (x, xs, suffxs) => [xs, ...suffxs],
   [],
   list
@@ -835,9 +839,9 @@ An object that has an `equals` function which can be used to compare other objec
 
 Make array a setoid:
 
-```js
+```fs
 Array.prototype.equals = function (arr) {
-  const len = this.length
+  let len = this.length
   if (len !== arr.length) {
     return false
   }
@@ -857,7 +861,7 @@ Array.prototype.equals = function (arr) {
 
 An object that has a `concat` function that combines it with another object of the same type.
 
-```js
+```fs
 ;[1].concat([2]) // [1, 2]
 ```
 
@@ -865,8 +869,8 @@ An object that has a `concat` function that combines it with another object of t
 
 An object that has a `reduce` function that applies a function against an accumulator and each element in the array (from left to right) to reduce it to a single value.
 
-```js
-const sum = (list) => list.reduce((acc, val) => acc + val, 0)
+```fs
+let sum = (list) => list.reduce((acc, val) => acc + val, 0)
 sum([1, 2, 3]) // 6
 ```
 
@@ -874,9 +878,9 @@ sum([1, 2, 3]) // 6
 A lens is a structure (often an object or function) that pairs a getter and a non-mutating setter for some other data
 structure.
 
-```js
+```fs
 // Using [Ramda's lens](http://ramdajs.com/docs/#lens)
-const nameLens = R.lens(
+let nameLens = R.lens(
   // getter for name property on an object
   (obj) => obj.name,
   // setter for name property
@@ -886,8 +890,8 @@ const nameLens = R.lens(
 
 Having the pair of get and set for a given data structure enables a few key features.
 
-```js
-const person = {name: 'Gertrude Blanch'}
+```fs
+let person = {name: 'Gertrude Blanch'}
 
 // invoke the getter
 R.view(nameLens, person) // 'Gertrude Blanch'
@@ -901,16 +905,16 @@ R.over(nameLens, uppercase, person) // {name: 'GERTRUDE BLANCH'}
 
 Lenses are also composable. This allows easy immutable updates to deeply nested data.
 
-```js
+```fs
 // This lens focuses on the first item in a non-empty array
-const firstLens = R.lens(
+let firstLens = R.lens(
   // get first item in array
   xs => xs[0],
   // non-mutating setter for first item in array
   (val, [__, ...xs]) => [val, ...xs]
 )
 
-const people = [{name: 'Gertrude Blanch'}, {name: 'Shafi Goldwasser'}]
+let people = [{name: 'Gertrude Blanch'}, {name: 'Shafi Goldwasser'}]
 
 // Despite what you may assume, lenses compose left-to-right.
 R.over(compose(firstLens, nameLens), uppercase, people) // [{'name': 'GERTRUDE BLANCH'}, {'name': 'Shafi Goldwasser'}]
@@ -926,28 +930,28 @@ Often functions in JavaScript will include comments that indicate the types of t
 
 There's quite a bit of variance across the community but they often follow the following patterns:
 
-```js
+```fs
 // functionName :: firstArgType -> secondArgType -> returnType
 
 // add :: Number -> Number -> Number
-const add = (x) => (y) => x + y
+let add = (x) => (y) => x + y
 
 // increment :: Number -> Number
-const increment = (x) => x + 1
+let increment = (x) => x + 1
 ```
 
 If a function accepts another function as an argument it is wrapped in parentheses.
 
-```js
+```fs
 // call :: (a -> b) -> a -> b
-const call = (f) => (x) => f(x)
+let call = (f) => (x) => f(x)
 ```
 
 The letters `a`, `b`, `c`, `d` are used to signify that the argument can be of any type. The following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an array of values of type `a`, and returns an array of values of type `b`.
 
-```js
+```fs
 // map :: (a -> b) -> [a] -> [b]
-const map = (f) => (list) => list.map(f)
+let map = (f) => (list) => list.map(f)
 ```
 
 __Further reading__
@@ -962,13 +966,13 @@ A composite type made from putting other types together. Two common classes of a
 A Sum type is the combination of two types together into another one. It is called sum because the number of possible values in the result type is the sum of the input types.
 
 JavaScript doesn't have types like this but we can use `Set`s to pretend:
-```js
+```fs
 // imagine that rather than sets here we have types that can only have these values
-const bools = new Set([true, false])
-const halfTrue = new Set(['half-true'])
+let bools = new Set([true, false])
+let halfTrue = new Set(['half-true'])
 
 // The weakLogic type contains the sum of the values from bools and halfTrue
-const weakLogicValues = new Set([...bools, ...halfTrue])
+let weakLogicValues = new Set([...bools, ...halfTrue])
 ```
 
 Sum types are sometimes called union types, discriminated unions, or tagged unions.
@@ -981,9 +985,9 @@ Flow includes [union types](https://flow.org/en/docs/types/unions/) and TypeScri
 
 A **product** type combines types together in a way you're probably more familiar with:
 
-```js
+```fs
 // point :: (Number, Number) -> {x: Number, y: Number}
-const point = (x, y) => ({ x, y })
+let point = (x, y) => ({ x, y })
 ```
 It's called a product because the total possible values of the data structure is the product of the different values. Many languages have a tuple type which is the simplest formulation of a product type.
 
@@ -994,10 +998,10 @@ Option is a [sum type](#sum-type) with two cases often called `Some` and `None`.
 
 Option is useful for composing functions that might not return a value.
 
-```js
+```fs
 // Naive definition
 
-const Some = (v) => ({
+let Some = (v) => ({
   val: v,
   map (f) {
     return Some(f(this.val))
@@ -1007,7 +1011,7 @@ const Some = (v) => ({
   }
 })
 
-const None = () => ({
+let None = () => ({
   map (f) {
     return this
   },
@@ -1017,19 +1021,19 @@ const None = () => ({
 })
 
 // maybeProp :: (String, {a}) -> Option a
-const maybeProp = (key, obj) => typeof obj[key] === 'undefined' ? None() : Some(obj[key])
+let maybeProp = (key, obj) => typeof obj[key] === 'undefined' ? None() : Some(obj[key])
 ```
 Use `chain` to sequence functions that return `Option`s
-```js
+```fs
 
 // getItem :: Cart -> Option CartItem
-const getItem = (cart) => maybeProp('item', cart)
+let getItem = (cart) => maybeProp('item', cart)
 
 // getPrice :: Item -> Option Number
-const getPrice = (item) => maybeProp('price', item)
+let getPrice = (item) => maybeProp('price', item)
 
 // getNestedPrice :: cart -> Option a
-const getNestedPrice = (cart) => getItem(cart).chain(getPrice)
+let getNestedPrice = (cart) => getItem(cart).chain(getPrice)
 
 getNestedPrice({}) // None()
 getNestedPrice({item: {foo: 1}}) // None()
@@ -1041,25 +1045,25 @@ getNestedPrice({item: {price: 9.99}}) // Some(9.99)
 ## Function
 A **function** `f :: A => B` is an expression - often called arrow or lambda expression - with **exactly one (immutable)** parameter of type `A` and **exactly one** return value of type `B`. That value depends entirely on the argument, making functions context-independant, or [referentially transparent](#referential-transparency). What is implied here is that a function must not produce any hidden [side effects](#side-effects) - a function is always [pure](#purity), by definition. These properties make functions pleasant to work with: they are entirely deterministic and therefore predictable. Functions enable working with code as data, abstracting over behaviour:
 
-```js
+```fs
 // times2 :: Number -> Number
-const times2 = n => n * 2
+let times2 = n => n * 2
 
 ;[1, 2, 3].map(times2) // [2, 4, 6]
 ```
 
 ## Partial function
 A partial function is a [function](#function) which is not defined for all arguments - it might return an unexpected result or may never terminate. Partial functions add cognitive overhead, they are harder to reason about and can lead to runtime errors. Some examples:
-```js
+```fs
 // example 1: sum of the list
 // sum :: [Number] -> Number
-const sum = arr => arr.reduce((a, b) => a + b)
+let sum = arr => arr.reduce((a, b) => a + b)
 sum([1, 2, 3]) // 6
 sum([]) // TypeError: Reduce of empty array with no initial value
 
 // example 2: get the first item in list
 // first :: [A] -> A
-const first = a => a[0]
+let first = a => a[0]
 first([42]) // 42
 first([]) // undefined
 // or even worse:
@@ -1068,7 +1072,7 @@ first([])[0] // Uncaught TypeError: Cannot read property '0' of undefined
 
 // example 3: repeat function N times
 // times :: Number -> (Number -> Number) -> Number
-const times = n => fn => n && (fn(n), times(n - 1)(fn))
+let times = n => fn => n && (fn(n), times(n - 1)(fn))
 times(3)(console.log)
 // 3
 // 2
@@ -1080,18 +1084,18 @@ times(-1)(console.log)
 ### Dealing with partial functions
 Partial functions are dangerous as they need to be treated with great caution. You might get an unexpected (wrong) result or run into runtime errors. Sometimes a partial function might not return at all. Being aware of and treating all these edge cases accordingly can become very tedious.
 Fortunately a partial function can be converted to a regular (or total) one. We can provide default values or use guards to deal with inputs for which the (previously) partial function is undefined. Utilizing the [`Option`](#Option) type, we can yield either `Some(value)` or `None` where we would otherwise have behaved unexpectedly:
-```js
+```fs
 // example 1: sum of the list
 // we can provide default value so it will always return result
 // sum :: [Number] -> Number
-const sum = arr => arr.reduce((a, b) => a + b, 0)
+let sum = arr => arr.reduce((a, b) => a + b, 0)
 sum([1, 2, 3]) // 6
 sum([]) // 0
 
 // example 2: get the first item in list
 // change result to Option
 // first :: [A] -> Option A
-const first = a => a.length ? Some(a[0]) : None()
+let first = a => a.length ? Some(a[0]) : None()
 first([42]).map(a => console.log(a)) // 42
 first([]).map(a => console.log(a)) // console.log won't execute at all
 // our previous worst case
@@ -1104,7 +1108,7 @@ first([]).map(a => console.log(a[0])) // won't execte, so we won't have error he
 // example 3: repeat function N times
 // we should make function always terminate by changing conditions:
 // times :: Number -> (Number -> Number) -> Number
-const times = n => fn => n > 0 && (fn(n), times(n - 1)(fn))
+let times = n => fn => n > 0 && (fn(n), times(n - 1)(fn))
 times(3)(console.log)
 // 3
 // 2
