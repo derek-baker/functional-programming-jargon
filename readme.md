@@ -1,8 +1,10 @@
 # Functional Programming Jargon
 
+**WORK IN PROGRESS**
+
 Functional programming (FP) provides many advantages, and its popularity has been increasing as a result. However, each programming paradigm comes with its own unique jargon and FP is no exception. By providing a glossary, we hope to make learning FP easier.
 
-Examples are presented in F#. [Why F#](https://fsharpforfunandprofit.com/why-use-fsharp/)
+Examples in this fork are presented in F#. [Why F#](https://fsharpforfunandprofit.com/why-use-fsharp/)
 
 Where applicable, this document uses terms defined in the [Fantasy Land spec](https://github.com/fantasyland/fantasy-land)
 
@@ -128,39 +130,24 @@ let addToFive x = x + five
 addToFive 3 // => 8
 ```
 
-In this case the `x` is retained in `addToFive`'s closure with the value `5`. `addToFive` can then be called with the `y`
+In this case the variable `five` is retained in `addToFive`'s closure with the value `5`. `addToFive` can then be called with the `y`
 to get back the sum.
 
 __Further reading/Sources__
 * [Lambda Vs Closure](http://stackoverflow.com/questions/220658/what-is-the-difference-between-a-closure-and-a-lambda)
-* [JavaScript Closures highly voted discussion](http://stackoverflow.com/questions/111102/how-do-javascript-closures-work)
 
 ## Partial Application
 
 Partially applying a function means creating a new function by pre-filling some of the arguments to the original function.
 
 ```fs
-// Helper to create partially applied functions
-// Takes a function and some arguments
-let partial = (f, ...args) =>
-  // returns a function that takes the rest of the arguments
-  (...moreArgs) =>
-    // and calls the original function with all of them
-    f(...args, ...moreArgs)
-
 // Something to apply
-let add3 = (a, b, c) => a + b + c
+let add3 a b c = a + b + c
 
 // Partially applying `2` and `3` to `add3` gives you a one-argument function
-let fivePlus = partial(add3, 2, 3) // (c) => 2 + 3 + c
+let fivePlus = add3 2 3 // (c) -> 2 + 3 + c
 
 fivePlus(4) // 9
-```
-
-You can also use `Function.prototype.bind` to partially apply a function in JS:
-
-```fs
-let add1More = add3.bind(null, 2, 3) // (c) => 2 + 3 + c
 ```
 
 Partial application helps create simpler functions from more complex ones by baking in data when you have it. [Curried](#currying) functions are automatically partially applied.
@@ -170,47 +157,52 @@ Partial application helps create simpler functions from more complex ones by bak
 
 The process of converting a function that takes multiple arguments into a function that takes them one at a time.
 
-Each time the function is called it only accepts one argument and returns a function that takes one argument until all arguments are passed.
+Each time the function is called, it only accepts one argument and returns a function that takes one argument until all arguments are passed.
 
 ```fs
-let sum = (a, b) => a + b
+let sum = fun a b c -> a + b + c
 
-let curriedSum = (a) => (b) => a + b
+let curriedSum = fun a -> 
+  fun b -> 
+    fun c -> a + b + c
 
-curriedSum(40)(2) // 42.
+curriedSum 38 2 2 // 42
 
-let add2 = curriedSum(2) // (b) => 2 + b
+let add2: int -> int -> int = curriedSum 2 
 
-add2(10) // 12
-
+add2 9 1 // 12
 ```
 
 ## Auto Currying
-Transforming a function that takes multiple arguments into one that if given less than its correct number of arguments returns a function that takes the rest. When the function gets the correct number of arguments it is then evaluated.
+Transforming a function that takes multiple arguments into one that, if given less than its correct number of arguments returns a function that takes the rest. When the function gets the correct number of arguments it is then evaluated.
 
-lodash & Ramda have a `curry` function that works this way.
+As illustrated in the 'Currying' example, functions in F# are auto-curried.
 
 ```fs
-let add = (x, y) => x + y
+let add x y = x + y
 
-let curriedAdd = _.curry(add)
-curriedAdd(1, 2) // 3
-curriedAdd(1) // (y) => 1 + y
-curriedAdd(1)(2) // 3
+let sum1: int = add 1 2 // 3
+let add1: int -> int = add 1 // (y) => 1 + y
+let sum2 = (add 1) 2 // 3
 ```
 
 __Further reading__
 * [Favoring Curry](http://fr.umio.us/favoring-curry/)
-* [Hey Underscore, You're Doing It Wrong!](https://www.youtube.com/watch?v=m3svKOdZijA)
+
 
 ## Function Composition
 
 The act of putting two functions together to form a third function where the output of one function is the input of the other. This is one of the most important ideas of functional programming.
 
 ```fs
-let compose = (f, g) => (a) => f(g(a)) // Definition
-let floorAndToString = compose((val) => val.toString(), Math.floor) // Usage
-floorAndToString(121.212121) // '121'
+let compose = fun f g -> fun a -> f a |> g 
+
+let getFloor (value: decimal) = System.Math.Floor value
+let asString value = value.ToString()
+
+let getFloorAsString = compose getFloor asString
+
+getFloorAsString 121.21m // '121'
 ```
 
 ## Continuation
@@ -249,32 +241,31 @@ readFileAsync('path/to/file', (err, response) => {
 A function is pure if the return value is only determined by its input values, and does not produce side effects. The function must always return the same result when given the same input.
 
 ```fs
-let greet = (name) => `Hi, ${name}`
+let greet name = $"Hi, {name}"
 
-greet('Brianne') // 'Hi, Brianne'
+greet "Brianne" // 'Hi, Brianne'
 ```
 
 As opposed to each of the following:
 
 ```fs
-window.name = 'Brianne'
+let mutable name = "Brianne"
 
-let greet = () => `Hi, ${window.name}`
+let greet = fun _ -> $"Hi, {name}"
 
-greet() // "Hi, Brianne"
+greet // "Hi, Brianne"
 ```
 
 The above example's output is based on data stored outside of the function...
 
 ```fs
-let greeting
+let mutable greeting = "Hey"
 
-let greet = (name) => {
-  greeting = `Hi, ${name}`
-}
-
-greet('Brianne')
-greeting // "Hi, Brianne"
+let greet name = 
+  greeting <- $"Hi, {name}" // |> ignore 
+  
+greet "Brianne"
+printfn $"{greeting}" // "Hi, Brianne"
 ```
 
 ... and this one modifies state outside of the function.
