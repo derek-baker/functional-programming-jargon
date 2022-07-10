@@ -20,7 +20,7 @@ __Translations__
 * [Polish](https://github.com/Deloryn/functional-programming-jargon)
 * [Haskell Turkish](https://github.com/mrtkp9993/functional-programming-jargon)
 * [Haskell Russian](https://github.com/epogrebnyak/functional-programming-jargon)
-* [F-#](https://github.com/derek-baker/functional-programming-jargon)
+* [F#](https://github.com/derek-baker/functional-programming-jargon)
 
 __Table of Contents__
 <!-- RM(noparent,notop) -->
@@ -106,15 +106,12 @@ __Further reading__
 A function which takes a function as an argument and/or returns a function.
 
 ```fs
-let filter predicate list: list<int> = 
-    list |> List.filter predicate
-
-let isEven = fun x -> 
+let isEven x = 
     match x with 
     | _ when x % 2 = 0 -> true
     | _  -> false
 
-let evenList = filter isEven [0; 1; 2;]   
+let evenList = [0; 1; 2;] |> List.filter isEven   
 printfn $"{evenList}" // [0, 2]
 ```
 
@@ -174,16 +171,16 @@ add2 9 1 // 12
 ```
 
 ## Auto Currying
-Transforming a function that takes multiple arguments into one that, if given less than its correct number of arguments returns a function that takes the rest. When the function gets the correct number of arguments it is then evaluated.
+Transforming a function that takes multiple arguments into one that, if provided with fewer than the correct number of arguments, returns a function that takes the rest. When the function gets the correct number of arguments it is then evaluated.
 
-As illustrated in the 'Currying' example, functions in F# are auto-curried.
+In the example below, unctions in F# are auto-curried.
 
 ```fs
 let add x y = x + y
 
 let sum1: int = add 1 2 // 3
 let add1: int -> int = add 1 // (y) => 1 + y
-let sum2 = (add 1) 2 // 3
+let sum2 = add1 2 // 3
 ```
 
 __Further reading__
@@ -210,31 +207,18 @@ getFloorAsString 121.21m // '121'
 At any given point in a program, the part of the code that's yet to be executed is known as a continuation.
 
 ```fs
-let printAsString = (num) => console.log(`Given ${num}`)
+let log value = printfn $"{value}"
 
-let addOneAndContinue = (num, cc) => {
+let printAsString logFunc num = logFunc $"Given {num}"
+
+let addOneAndContinue num next =  
   let result = num + 1
-  cc(result)
-}
+  next log result
 
-addOneAndContinue(2, printAsString) // 'Given 3'
+addOneAndContinue 2 printAsString // 'Given 3'
 ```
 
-Continuations are often seen in asynchronous programming when the program needs to wait to receive data before it can continue. The response is often passed off to the rest of the program, which is the continuation, once it's been received.
-
-```fs
-let continueProgramWith = (data) => {
-  // Continues program with data
-}
-
-readFileAsync('path/to/file', (err, response) => {
-  if (err) {
-    // handle error
-    return
-  }
-  continueProgramWith(response)
-})
-```
+For more on continuations in F#, see [F# For Fun and Profit](https://fsharpforfunandprofit.com/posts/computation-expressions-continuations/#continuations)
 
 ## Pure Function
 
@@ -272,14 +256,15 @@ printfn $"{greeting}" // "Hi, Brianne"
 
 ## Side effects
 
-A function or expression is said to have a side effect if apart from returning a value, it interacts with (reads from or writes to) external mutable state.
+A function or expression is said to have a side effect if, apart from returning a value, it interacts with (reads from or writes to) external mutable state.
 
 ```fs
-let differentEveryTime = new Date()
-```
+let getTime = fun _ -> System.DateTime.Now
+let time1 = getTime ()
+let time2 = getTime ()
 
-```fs
-console.log('IO is a side effect!')
+if time1 <> time2 then 
+  printfn $"IO is a side effect!"
 ```
 
 ## Idempotent
@@ -287,11 +272,11 @@ console.log('IO is a side effect!')
 A function is idempotent if reapplying it to its result does not produce a different result.
 
 ```fs
-Math.abs(Math.abs(10))
-```
+System.Math.Abs -10 |> System.Math.Abs
 
-```fs
-sort(sort(sort([2, 1])))
+let predicate a = a 
+
+[2; 1] |> List.sortBy predicate  |> List.sortBy predicate |> List.sortBy predicate
 ```
 
 ## Point-Free Style
@@ -300,27 +285,27 @@ Writing functions where the definition does not explicitly identify the argument
 
 ```fs
 // Given
-let map = (fn) => (list) => list.map(fn)
-let add = (a) => (b) => a + b
+let map = fun (fn) -> fun (list) -> list |> List.map fn
+let add = fun (a) -> fun (b) -> a + b
 
 // Then
 
 // Not point-free - `numbers` is an explicit argument
-let incrementAll = (numbers) => map(add(1))(numbers)
+let incrementAll: list<int> -> list<int> = fun numbers -> map(add(1))(numbers)
 
 // Point-free - The list is an implicit argument
-let incrementAll2 = map(add(1))
+let incrementAll2: list<int> -> list<int> = map(add(1))
 ```
 
-Point-free function definitions look just like normal assignments without `function` or `=>`. It's worth mentioning that point-free functions are not necessarily better than their counterparts, as they can be more difficult to understand when complex.
+It's worth mentioning that point-free functions are not necessarily better than their counterparts, as they can be more difficult to understand when complex.
 
 ## Predicate
 A predicate is a function that returns true or false for a given value. A common use of a predicate is as the callback for array filter.
 
 ```fs
-let predicate = (a) => a > 2
+let predicate a = a > 2
 
-;[1, 2, 3, 4].filter(predicate) // [3, 4]
+[1; 2; 3; 4] |> List.filter predicate
 ```
 
 ## Contracts
@@ -328,16 +313,19 @@ let predicate = (a) => a > 2
 A contract specifies the obligations and guarantees of the behavior from a function or expression at runtime. This acts as a set of rules that are expected from the input and output of a function or expression, and errors are generally reported whenever a contract is violated.
 
 ```fs
-// Define our contract : int -> boolean
-let contract = (input) => {
-  if (typeof input === 'number') return true
-  throw new Error('Contract violated: expected int -> boolean')
-}
+let contract = fun input -> 
+  if input > 0.0 then 
+    true
+  else 
+    failwith "Contract violated: expected positive input"
 
-let addOne = (num) => contract(num) && num + 1
+let squareRootOfPositiveNum (a: float) =  
+  contract a |> ignore
+  sqrt a
 
-addOne(2) // 3
-addOne('some string') // Contract violated: expected int -> boolean
+squareRootOfPositiveNum 4.0 // 2
+squareRootOfPositiveNum -2.0 // Contract violated: expected positive input
+
 ```
 
 ## Category
@@ -360,8 +348,8 @@ To be a valid category 3 rules must be met:
 Since these rules govern composition at very abstract level, category theory is great at uncovering new ways of composing things.
 
 As an example we can define a category Max as a class
-```fs
 
+```fs
 class Max {
   letructor (a) {
     this.a = a
@@ -380,7 +368,9 @@ class Max {
 new Max(2).compose(new Max(3)).compose(new Max(5)).id().id() // => Max(5)
 ```
 
-__Further reading__
+__Related content:__
+
+* [Category Theory for the Working Hacker by Philip Wadler](https://www.youtube.com/watch?v=V10hzjgoklA)
 
 * [Category Theory for Programmers](https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/)
 
@@ -388,12 +378,14 @@ __Further reading__
 
 Anything that can be assigned to a variable.
 
+Note that ["the null value is not normally used in F# for values or variables."](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/values/null-values)
+
 ```fs
-5
-Object.freeze({name: 'John', age: 30}) // The `freeze` function enforces immutability.
-;(a) => a
-;[1]
-undefined
+let five = 5
+let anonymousRecord = {| Name = "John"; Age = 30 |} 
+let identityFunc a = a
+let digitList = [0..9]
+let digitSequence = {0..9}
 ```
 
 ## letant
