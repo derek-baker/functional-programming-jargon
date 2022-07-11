@@ -541,22 +541,18 @@ when more is known about the functions (associative, communtative, idempotent, e
 An anonymous function that can be treated like a value.
 
 ```fs
-;(function (a) {
-  return a + 1
-})
-
-;(a) => a + 1
+fun a -> a + 1
 ```
 Lambdas are often passed as arguments to Higher-Order functions.
 
 ```fs
-;[1, 2].map((a) => a + 1) // [2, 3]
+[1; 2] |> List.map (fun a -> a + 1) // [2, 3]
 ```
 
 You can assign a lambda to a variable.
 
 ```fs
-let add1 = (a) => a + 1
+let add1 = fun a -> a + 1
 ```
 
 ## Lambda Calculus
@@ -909,37 +905,37 @@ Other implementations:
 
 ## Type Signatures
 
-Often functions in JavaScript will include comments that indicate the types of their arguments and return values.
+Oftentimes, manually adding type signatures in F# is unnecessary, as [the F# compiler uses type inference](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/type-inference#type-inference-in-general).
 
-There's quite a bit of variance across the community but they often follow the following patterns:
+However, we can explicitly specify type signatures like so:
 
 ```fs
-// functionName :: firstArgType -> secondArgType -> returnType
+let add: int -> int -> int = fun x -> fun (y) -> x + y
 
-// add :: Number -> Number -> Number
-let add = (x) => (y) => x + y
-
-// increment :: Number -> Number
-let increment = (x) => x + 1
+let increment: int -> int = fun x -> x + 1
 ```
 
-If a function accepts another function as an argument it is wrapped in parentheses.
+If a function accepts another function as an argument, it is wrapped in parentheses.
 
 ```fs
-// call :: (a -> b) -> a -> b
-let call = (f) => (x) => f(x)
+let call: ('a -> 'b) -> 'a -> 'b = fun f -> 
+  fun x -> 
+    f x
 ```
 
-The letters `a`, `b`, `c`, `d` are used to signify that the argument can be of any type. The following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an array of values of type `a`, and returns an array of values of type `b`.
+In the example above, the annotations `'a`, `'b`, `'c`, and `'d` are used to signify that the argument can be of any type. 
+
+In the example below, the following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an array of values of type `a`, and returns an array of values of type `b`.
 
 ```fs
-// map :: (a -> b) -> [a] -> [b]
-let map = (f) => (list) => list.map(f)
+let map: ('a -> 'b) -> list<'a> -> list<'b> = fun f -> 
+  fun list -> 
+    list |> List.map f
 ```
 
 __Further reading__
-* [Ramda's type signatures](https://github.com/ramda/ramda/wiki/Type-Signatures)
-* [Mostly Adequate Guide](https://drboolean.gitbooks.io/mostly-adequate-guide/content/ch7.html#whats-your-type)
+* [Function signatures in F#](https://fsharpforfunandprofit.com/posts/function-signatures/)
+
 * [What is Hindley-Milner?](http://stackoverflow.com/a/399392/22425) on Stack Overflow
 
 ## Algebraic data type
@@ -948,7 +944,6 @@ A composite type made from putting other types together. Two common classes of a
 ### Sum type
 A Sum type is the combination of two types together into another one. It is called sum because the number of possible values in the result type is the sum of the input types.
 
-JavaScript doesn't have types like this but we can use `Set`s to pretend:
 ```fs
 // imagine that rather than sets here we have types that can only have these values
 let bools = new Set([true, false])
@@ -958,11 +953,7 @@ let halfTrue = new Set(['half-true'])
 let weakLogicValues = new Set([...bools, ...halfTrue])
 ```
 
-Sum types are sometimes called union types, discriminated unions, or tagged unions.
-
-There's a [couple](https://github.com/paldepind/union-type) [libraries](https://github.com/puffnfresh/daggy) in JS which help with defining and using union types.
-
-Flow includes [union types](https://flow.org/en/docs/types/unions/) and TypeScript has [Enums](https://www.typescriptlang.org/docs/handbook/enums.html) to serve the same role.
+Sum types are sometimes called union types, discriminated unions, or tagged unions. [Further reading](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/discriminated-unions)
 
 ### Product type
 
@@ -982,91 +973,47 @@ Option is a [sum type](#sum-type) with two cases often called `Some` and `None`.
 Option is useful for composing functions that might not return a value.
 
 ```fs
-// Naive definition
+// Normally, we'd use use the Option<'a> that is defined in Microsoft.FSharp.Core.OptionModule
+type Option<'a> = 
+  | Some of 'a
+  | None
 
-let Some = (v) => ({
-  val: v,
-  map (f) {
-    return Some(f(this.val))
-  },
-  chain (f) {
-    return f(this.val)
-  }
-})
+let isSomeA result = 
+  match result with 
+  | Some x -> true
+  | None -> false
 
-let None = () => ({
-  map (f) {
-    return this
-  },
-  chain (f) {
-    return this
-  }
-})
+let result1: Option<int> = Some 5
+let result2: Option<int> = None
 
-// maybeProp :: (String, {a}) -> Option a
-let maybeProp = (key, obj) => typeof obj[key] === 'undefined' ? None() : Some(obj[key])
-```
-Use `chain` to sequence functions that return `Option`s
-```fs
-
-// getItem :: Cart -> Option CartItem
-let getItem = (cart) => maybeProp('item', cart)
-
-// getPrice :: Item -> Option Number
-let getPrice = (item) => maybeProp('price', item)
-
-// getNestedPrice :: cart -> Option a
-let getNestedPrice = (cart) => getItem(cart).chain(getPrice)
-
-getNestedPrice({}) // None()
-getNestedPrice({item: {foo: 1}}) // None()
-getNestedPrice({item: {price: 9.99}}) // Some(9.99)
+isSomeA result1 // true
+isSomeA result2 // false
 ```
 
-`Option` is also known as `Maybe`. `Some` is sometimes called `Just`. `None` is sometimes called `Nothing`.
+`Option` is also sometimes known as `Maybe`. `Some` may sometimes be called `Just`. `None` is sometimes called `Nothing`.
 
 ## Function
-A **function** `f :: A => B` is an expression - often called arrow or lambda expression - with **exactly one (immutable)** parameter of type `A` and **exactly one** return value of type `B`. That value depends entirely on the argument, making functions context-independant, or [referentially transparent](#referential-transparency). What is implied here is that a function must not produce any hidden [side effects](#side-effects) - a function is always [pure](#purity), by definition. These properties make functions pleasant to work with: they are entirely deterministic and therefore predictable. Functions enable working with code as data, abstracting over behaviour:
+A **function** `f :: A => B` is an expression - often called arrow or lambda expression - with **exactly one (immutable)** parameter of type `A` and **exactly one** return value of type `B`. That value depends entirely on the argument, making functions context-independent, or [referentially transparent](#referential-transparency). What is implied here is that a function must not produce any hidden [side effects](#side-effects) - a function is always [pure](#purity), by definition. These properties make functions pleasant to work with: they are entirely deterministic and therefore predictable. Functions enable working with code as data, abstracting over behaviour:
 
 ```fs
-// times2 :: Number -> Number
-let times2 = n => n * 2
+let times2 n = n * 2
 
-;[1, 2, 3].map(times2) // [2, 4, 6]
+[1; 2; 3] |> List.map times2 // [2, 4, 6]
 ```
 
 ## Partial function
 A partial function is a [function](#function) which is not defined for all arguments - it might return an unexpected result or may never terminate. Partial functions add cognitive overhead, they are harder to reason about and can lead to runtime errors. Some examples:
+
 ```fs
-// example 1: sum of the list
-// sum :: [Number] -> Number
-let sum = arr => arr.reduce((a, b) => a + b)
-sum([1, 2, 3]) // 6
-sum([]) // TypeError: Reduce of empty array with no initial value
-
-// example 2: get the first item in list
-// first :: [A] -> A
-let first = a => a[0]
-first([42]) // 42
-first([]) // undefined
-// or even worse:
-first([[42]])[0] // 42
-first([])[0] // Uncaught TypeError: Cannot read property '0' of undefined
-
-// example 3: repeat function N times
-// times :: Number -> (Number -> Number) -> Number
-let times = n => fn => n && (fn(n), times(n - 1)(fn))
-times(3)(console.log)
-// 3
-// 2
-// 1
-times(-1)(console.log)
-// RangeError: Maximum call stack size exceeded
+let first (arr: int array) = arr[0]
+first [|42|] // 42
+first [||] // System.IndexOutOfRangeException: Index was outside the bounds of the array.
 ```
 
 ### Dealing with partial functions
 Partial functions are dangerous as they need to be treated with great caution. You might get an unexpected (wrong) result or run into runtime errors. Sometimes a partial function might not return at all. Being aware of and treating all these edge cases accordingly can become very tedious.
 Fortunately a partial function can be converted to a regular (or total) one. We can provide default values or use guards to deal with inputs for which the (previously) partial function is undefined. Utilizing the [`Option`](#Option) type, we can yield either `Some(value)` or `None` where we would otherwise have behaved unexpectedly:
+
 ```fs
 // example 1: sum of the list
 // we can provide default value so it will always return result
@@ -1099,28 +1046,7 @@ times(3)(console.log)
 times(-1)(console.log)
 // won't execute anything
 ```
+
 Making your partial functions total ones, these kinds of runtime errors can be prevented. Always returning a value will also make for code that is both easier to maintain as well as to reason about.
 
-## Functional Programming Libraries in JavaScript
-
-* [mori](https://github.com/swannodette/mori)
-* [Immutable](https://github.com/facebook/immutable-js/)
-* [Immer](https://github.com/mweststrate/immer)
-* [Ramda](https://github.com/ramda/ramda)
-* [ramda-adjunct](https://github.com/char0n/ramda-adjunct)
-* [ramda-extension](https://github.com/tommmyy/ramda-extension)
-* [Folktale](http://folktale.origamitower.com/)
-* [monet.js](https://cwmyers.github.io/monet.js/)
-* [lodash](https://github.com/lodash/lodash)
-* [Underscore.js](https://github.com/jashkenas/underscore)
-* [Lazy.js](https://github.com/dtao/lazy.js)
-* [maryamyriameliamurphies.js](https://github.com/sjsyrek/maryamyriameliamurphies.js)
-* [Haskell in ES6](https://github.com/casualjavascript/haskell-in-es6)
-* [Sanctuary](https://github.com/sanctuary-js/sanctuary)
-* [Crocks](https://github.com/evilsoft/crocks)
-* [Fluture](https://github.com/fluture-js/Fluture)
-* [fp-ts](https://github.com/gcanti/fp-ts)
-
 ---
-
-__P.S:__ This repo is successful due to the wonderful [contributions](https://github.com/hemanth/functional-programming-jargon/graphs/contributors)!
