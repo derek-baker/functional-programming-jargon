@@ -41,10 +41,10 @@ __Table of Contents__
 * [Contracts](#contracts)
 * [Category](#category)
 * [Value](#value)
-* [letant](#letant)
-  * [letant Function](#letant-function)
-  * [letant Functor](#letant-functor)
-  * [letant Monad](#letant-monad)
+* [Constant](#Constant)
+  * [Constant Function](#constant-function)
+  * [Constant Functor](#constant-functor)
+  * [Constant Monad](#constant-monad)
 * [Functor](#functor)
 * [Pointed Functor](#pointed-functor)
 * [Lift](#lift)
@@ -387,48 +387,46 @@ let identityFunc a = a
 let digitList = [0..9]
 let digitSequence = {0..9}
 ```
-
-## letant
+## Constant
 
 A variable that cannot be reassigned once defined.
 
 ```fs
 let five = 5
-let john = Object.freeze({name: 'John', age: 30})
+let john = {| Name = "John"; Age = 30 |}
+john.Age + five = {| Name = "John"; Age = 30 |}.Age + 5 // true
 ```
 
-letants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
+constants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
 
-With the above two letants the following expression will always return `true`.
+The third line in the example above will always return `true`.
 
-```fs
-john.age + five === ({name: 'John', age: 30}).age + (5)
-```
-
-### letant Function
+### Constant Function
 
 A [curried](#currying) function that ignores its second argument:
 
 ```fs
-let letant = a => () => a
-
-;[1, 2].map(letant(0)) // => [0, 0]
+let constant = fun a -> fun _ -> a
+let project: obj -> int = constant 0
+[1; 2] |> List.map project
 ```
 
-### letant Functor
+### Constant Functor
 
 Object whose `map` doesn't transform the contents. See [Functor](#functor)
 
 ```fs
-  letant(1).map(n => n + 1) // => letant(1)
+let constant = fun a -> fun _ -> a
+
+constant(1).map(n => n + 1) // => constant(1)
 ```
 
-### letant Monad
+### constant Monad
 
 Object whose `chain` doesn't transform the contents. See [Monad](#monad)
 
 ```fs
-  letant(1).chain(n => letant(n + 1)) // => letant(1)
+  constant(1).chain(n => constant(n + 1)) // => constant(1)
 ```
 
 ## Functor
@@ -514,10 +512,10 @@ behavior of the program is said to be referentially transparent.
 Given the function greet:
 
 ```fs
-let greet = () => 'Hello World!'
+let greet = "Hello World!"
 ```
 
-Any invocation of `greet()` can be replaced with `Hello World!` hence greet is
+Any invocation of `greet` can be replaced with `Hello World!` hence greet is
 referentially transparent. This would be broken if greet depended on external
 state like configuration or a database call. See also [Pure Function](#pure-function) and
 [Equational Reasoning](#equational-reasoning).
@@ -709,11 +707,9 @@ A transformation function.
 A function where the input type is the same as the output.
 
 ```fs
-// uppercase :: String -> String
-let uppercase = (str) => str.toUpperCase()
+let uppercase (str: string): string = str.ToUpper()
 
-// decrement :: Number -> Number
-let decrement = (x) => x - 1
+let decrement (x: int): int = x - 1
 ```
 
 ### Isomorphism
@@ -723,14 +719,21 @@ A pair of transformations between 2 types of objects that is structural in natur
 For example, 2D coordinates could be stored as an array `[2,3]` or object `{x: 2, y: 3}`.
 
 ```fs
-// Providing functions to convert in both directions makes them isomorphic.
-let pairToCoords = (pair) => ({x: pair[0], y: pair[1]})
+type Point = { X: float; Y: float; }
+type Pair = float * float
 
-let coordsToPair = (coords) => [coords.x, coords.y]
+// Providing functions to convert in both directions...
+let pairToCoords (pair: Pair): Point = 
+    let (x, y) = pair
+    { X = x; Y = y }
 
-coordsToPair(pairToCoords([1, 2])) // [1, 2]
+// ... makes them isomorphic
+let coordsToPair (coords: Point): Pair = 
+    (coords.X, coords.Y)
 
-pairToCoords(coordsToPair({x: 1, y: 2})) // {x: 1, y: 2}
+pairToCoords (1, 2) |> coordsToPair  // (1, 2)
+
+coordsToPair {X = 1; Y = 2} |> pairToCoords // {X = 1; Y = 2}
 ```
 
 ### Homomorphism
