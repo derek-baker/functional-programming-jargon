@@ -173,7 +173,7 @@ add2 9 1 // 12
 ## Auto Currying
 Transforming a function that takes multiple arguments into one that, if provided with fewer than the correct number of arguments, returns a function that takes the rest. When the function gets the correct number of arguments it is then evaluated.
 
-In the example below, unctions in F# are auto-curried.
+In the example below, functions in F# are auto-curried.
 
 ```fs
 let add x y = x + y
@@ -276,7 +276,7 @@ System.Math.Abs -10 |> System.Math.Abs
 
 let predicate a = a 
 
-[2; 1] |> List.sortBy predicate  |> List.sortBy predicate |> List.sortBy predicate
+[2; 1] |> List.sortBy predicate |> List.sortBy predicate |> List.sortBy predicate
 ```
 
 ## Point-Free Style
@@ -446,10 +446,10 @@ object.map(compose(f, g)) ≍ object.map(g).map(f)
 
 (`f`, `g` are arbitrary functions)
 
-A common functor in JavaScript is `Array` since it abides to the two functor rules:
+A common functor in F# is `List.map`, since it abides to the two functor rules:
 
 ```fs
-;[1, 2, 3].map(x => x) // = [1, 2, 3]
+[1; 2; 3] |> List.map (fun x -> x) // = [1, 2, 3]
 ```
 
 and
