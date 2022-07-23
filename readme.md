@@ -20,7 +20,7 @@ __Translations__
 * [Polish](https://github.com/Deloryn/functional-programming-jargon)
 * [Haskell Turkish](https://github.com/mrtkp9993/functional-programming-jargon)
 * [Haskell Russian](https://github.com/epogrebnyak/functional-programming-jargon)
-* [F#](https://github.com/derek-baker/functional-programming-jargon)
+* [F# English](https://github.com/derek-baker/functional-programming-jargon)
 
 __Table of Contents__
 <!-- RM(noparent,notop) -->
@@ -77,7 +77,6 @@ __Table of Contents__
 * [Option](#option)
 * [Function](#function)
 * [Partial function](#partial-function)
-* [Functional Programming Libraries in JavaScript](#functional-programming-libraries-in-javascript)
 
 
 <!-- /RM -->
@@ -716,7 +715,7 @@ let decrement (x: int): int = x - 1
 
 A pair of transformations between 2 types of objects that is structural in nature and no data is lost.
 
-For example, 2D coordinates could be stored as an array `[2,3]` or object `{x: 2, y: 3}`.
+For example, 2D coordinates could be stored as a tuple `(2, 3)` or record `{x = 2; y = 3}`.
 
 ```fs
 type Point = { X: float; Y: float; }
@@ -913,7 +912,7 @@ Oftentimes, manually adding type signatures in F# is unnecessary, as [the F# com
 However, we can explicitly specify type signatures like so:
 
 ```fs
-let add: int -> int -> int = fun x -> fun (y) -> x + y
+let add: int -> int -> int = fun x -> fun y -> x + y
 
 let increment: int -> int = fun x -> x + 1
 ```
@@ -928,7 +927,7 @@ let call: ('a -> 'b) -> 'a -> 'b = fun f ->
 
 In the example above, the annotations `'a`, `'b`, `'c`, and `'d` are used to signify that the argument can be of any type. 
 
-In the example below, the following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an array of values of type `a`, and returns an array of values of type `b`.
+In the example below, the following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an list of values of type `a`, and returns an list of values of type `b`.
 
 ```fs
 let map: ('a -> 'b) -> list<'a> -> list<'b> = fun f -> 
@@ -948,12 +947,30 @@ A composite type made from putting other types together. Two common classes of a
 A Sum type is the combination of two types together into another one. It is called sum because the number of possible values in the result type is the sum of the input types.
 
 ```fs
-// imagine that rather than sets here we have types that can only have these values
-let bools = new Set([true, false])
-let halfTrue = new Set(['half-true'])
+// Define sum type (discriminated union)
+type WeakLogicValue =
+  | True of bool
+  | False of bool
+  | HalfTrue of string
 
-// The weakLogic type contains the sum of the values from bools and halfTrue
-let weakLogicValues = new Set([...bools, ...halfTrue])
+// We have to return a single type from a match expression, so we wrap the value in a Choice<'a, 'b>
+let getChoice (weakLogicValue: WeakLogicValue): Choice<bool, string> = 
+  match weakLogicValue with
+  | True t -> Choice1Of2 t
+  | False f -> Choice1Of2 f
+  | HalfTrue s -> Choice2Of2 s
+
+// Create instances of sum type
+let weakLogicTrue: WeakLogicValue = True true
+let weakLogicFalse : WeakLogicValue = False false
+let weakLogicHalfTrue : WeakLogicValue = HalfTrue "half-true"
+
+
+let unwrappedTrue = 
+  getChoice weakLogicTrue |> fun (Choice1Of2 choice) -> choice // True
+
+let unwrappedHalfTrue = 
+  getChoice weakLogicHalfTrue |> fun (Choice2Of2 choice) -> choice // "half-true"
 ```
 
 Sum types are sometimes called union types, discriminated unions, or tagged unions. [Further reading](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/discriminated-unions)
@@ -963,10 +980,9 @@ Sum types are sometimes called union types, discriminated unions, or tagged unio
 A **product** type combines types together in a way you're probably more familiar with:
 
 ```fs
-// point :: (Number, Number) -> {x: Number, y: Number}
-let point = (x, y) => ({ x, y })
+let point (x: 'a) (y: 'a): 'a * 'a = (x, y)
 ```
-It's called a product because the total possible values of the data structure is the product of the different values. Many languages have a tuple type which is the simplest formulation of a product type.
+It's called a product because the total possible values of the data structure is the product of the different values. F# has a tuple type, which is the simplest formulation of a product type.
 
 See also [Set theory](https://en.wikipedia.org/wiki/Set_theory).
 
