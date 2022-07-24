@@ -344,28 +344,7 @@ To be a valid category 3 rules must be met:
 3. Composition must be associative
     `f • (g • h)` is the same as `(f • g) • h`
 
-Since these rules govern composition at very abstract level, category theory is great at uncovering new ways of composing things.
-
-As an example we can define a category Max as a class
-
-```fs
-class Max {
-  letructor (a) {
-    this.a = a
-  }
-  id () {
-    return this
-  }
-  compose (b) {
-    return this.a > b.a ? this : b
-  }
-  toString () {
-    return `Max(${this.a})`
-  }
-}
-
-new Max(2).compose(new Max(3)).compose(new Max(5)).id().id() // => Max(5)
-```
+Since these rules govern composition at very abstract level, category theory can be used to uncover new ways of composing things.
 
 __Related content:__
 
@@ -415,17 +394,25 @@ let project: obj -> int = constant 0
 Object whose `map` doesn't transform the contents. See [Functor](#functor)
 
 ```fs
-let constant = fun a -> fun _ -> a
+type Constant (value: int) =
+  member this.value = value
+  member this.map (mapping: Constant -> 'a) =
+      this
 
-constant(1).map(n => n + 1) // => constant(1)
+Constant(1).map(fun o -> o.ToString()) // object: Constant
 ```
 
-### constant Monad
+### Constant Monad
 
 Object whose `chain` doesn't transform the contents. See [Monad](#monad)
 
 ```fs
-  constant(1).chain(n => constant(n + 1)) // => constant(1)
+type Constant (value: int) =
+  member this.value = value
+  member this.chain (value: int -> Constant) =
+      this
+
+Constant(1).chain (fun n -> Constant (n + 1)) // => Constant(1)
 ```
 
 ## Functor
@@ -433,41 +420,31 @@ Object whose `chain` doesn't transform the contents. See [Monad](#monad)
 An object that implements a `map` function that takes a function which is run on the contents of that object. A functor must adhere to two rules:
 
 __Preserves identity__
-```
-object.map(x => x) ≍ object
+```fs
+let object: int list = [] 
+object |> List.map(fun x -> x) = object // true
 ```
 
 __Composable__
 
-```
-object.map(compose(f, g)) ≍ object.map(g).map(f)
-```
-
-(`f`, `g` are arbitrary functions)
-
-A common functor in F# is `List.map`, since it abides to the two functor rules:
-
 ```fs
-[1; 2; 3] |> List.map (fun x -> x) // = [1, 2, 3]
-```
+let f = fun value -> value + 1
+let g = fun value -> value + 2
 
-and
+let object = [1; 2; 3]
 
-```fs
-let f = x => x + 1
-let g = x => x * 2
+let composed = object |> List.map (f >> g) 
+let pipelined = object |> List.map g |> List.map f
 
-;[1, 2, 3].map(x => f(g(x))) // = [3, 5, 7]
-;[1, 2, 3].map(g).map(f) // = [3, 5, 7]
+composed = pipelined // true
 ```
 
 ## Pointed Functor
 An object with an `of` function that puts _any_ single value into it.
 
-ES2015 adds `Array.of` making arrays a pointed functor.
-
+In F#, an example of a similar construct would be `Seq.ofList`.
 ```fs
-Array.of(1) // [1]
+Seq.ofList [1; 2; 3] // {1, 2, 3}
 ```
 
 ## Lift
@@ -502,7 +479,6 @@ Lifting simple values can be simply creating the object.
 Array.of(1) // => [1]
 ```
 
-
 ## Referential Transparency
 
 An expression that can be replaced with its value without changing the
@@ -526,8 +502,8 @@ truths about the system can be derived from the parts. You can also be confident
 about details of your system without having to go through every function.
 
 ```fs
-let grainToDogs = compose(chickenIntoDogs, grainIntoChicken)
-let grainToCats = compose(dogsIntoCats, grainToDogs)
+let grainToDogs = chickenIntoDogs >> grainIntoChicken
+let grainToCats = dogsIntoCats >> grainToDogs
 ```
 In the example above, if you know that `chickenIntoDogs` and `grainIntoChicken`
 are pure then you know that the composition is pure. This can be taken further
@@ -560,16 +536,14 @@ A branch of mathematics that uses functions to create a [universal model of comp
 Lazy evaluation is a call-by-need evaluation mechanism that delays the evaluation of an expression until its value is needed. In functional languages, this allows for structures like infinite lists, which would not normally be available in an imperative language where the sequencing of commands is significant.
 
 ```fs
-let rand = function*() {
-  while (1 < 2) {
-    yield Math.random()
-  }
-}
-```
+// Example source: https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/sequences#code-try-15
 
-```fs
-let randIter = rand()
-randIter.next() // Each execution gives a random value, expression is evaluated on need.
+let seqInfinite =
+    Seq.initInfinite (fun index ->
+        let n = float (index + 1)
+        1.0 / (n * n * (if ((index + 1) % 2 = 0) then 1.0 else -1.0)))
+
+seqInfinite |> Seq.iter (fun el -> printfn $"{el}") // Prints elements from infinite Seq
 ```
 
 ## Monoid
