@@ -1,5 +1,4 @@
-# Functional Programming Jargon - **WORK IN PROGRESS**
-
+# Functional Programming Jargon (The F# Version)
 
 
 Functional programming (FP) provides many advantages, and its popularity has been increasing as a result. However, each programming paradigm comes with its own unique jargon and FP is no exception. By providing a glossary, we hope to make learning FP easier.
@@ -20,7 +19,7 @@ __Translations__
 * [Polish](https://github.com/Deloryn/functional-programming-jargon)
 * [Haskell Turkish](https://github.com/mrtkp9993/functional-programming-jargon)
 * [Haskell Russian](https://github.com/epogrebnyak/functional-programming-jargon)
-* [F# English](https://github.com/derek-baker/functional-programming-jargon)
+* [F# World](https://github.com/derek-baker/functional-programming-jargon)
 
 __Table of Contents__
 <!-- RM(noparent,notop) -->
@@ -86,14 +85,14 @@ __Table of Contents__
 The number of arguments a function takes. From words like unary, binary, ternary, etc. 
 
 ```fs
-let sum = fun a b -> a + b 
 // The arity of sum is 2 (binary)
+let sum a b = a + b 
 
-let inc = fun a -> a + 1
 // The arity of inc is 1 (unary)
+let inc a = a + 1
 
-let zero = fun _ -> 0
 // The arity of zero is 0 (nullary)
+let zero () = 0
 ```
 
 __Further reading__
@@ -245,7 +244,7 @@ The above example's output is based on data stored outside of the function...
 let mutable greeting = "Hey"
 
 let greet name = 
-  greeting <- $"Hi, {name}" // |> ignore 
+  greeting <- $"Hi, {name}" 
   
 greet "Brianne"
 printfn $"{greeting}" // "Hi, Brianne"
@@ -299,7 +298,7 @@ let incrementAll2: list<int> -> list<int> = map(add(1))
 It's worth mentioning that point-free functions are not necessarily better than their counterparts, as they can be more difficult to understand when complex.
 
 ## Predicate
-A predicate is a function that returns true or false for a given value. A common use of a predicate is as the callback for array filter.
+A predicate is a function that returns true or false for a given value. A common use of a predicate is as the callback for filtering a list.
 
 ```fs
 let predicate a = a > 2
@@ -372,10 +371,9 @@ A variable that cannot be reassigned once defined.
 ```fs
 let five = 5
 let john = {| Name = "John"; Age = 30 |}
-john.Age + five = {| Name = "John"; Age = 30 |}.Age + 5 // true
 ```
 
-constants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
+Constants are [referentially transparent](#referential-transparency). That is, they can be replaced with the values that they represent without affecting the result.
 
 The third line in the example above will always return `true`.
 
@@ -399,7 +397,7 @@ type Constant (value: int) =
   member this.map (mapping: Constant -> 'a) =
       this
 
-Constant(1).map(fun o -> o.ToString()) // object: Constant
+Constant(1).map(fun o -> o.ToString()) // Constant(1)
 ```
 
 ### Constant Monad
@@ -533,7 +531,14 @@ A branch of mathematics that uses functions to create a [universal model of comp
 
 ## Lazy evaluation
 
-Lazy evaluation is a call-by-need evaluation mechanism that delays the evaluation of an expression until its value is needed. In functional languages, this allows for structures like infinite lists, which would not normally be available in an imperative language where the sequencing of commands is significant.
+Lazy evaluation is a call-by-need evaluation mechanism that delays the evaluation of an expression until its value is needed. 
+
+```fs
+let result: Lazy<int> = lazy (5 + 10)
+result.Force() // 15
+```
+
+In functional languages, lazy evaluation allows for structures like infinite lists, which would not normally be available in an imperative language where the sequencing of commands is significant.
 
 ```fs
 // Example source: https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/sequences#code-try-15
@@ -543,7 +548,7 @@ let seqInfinite =
         let n = float (index + 1)
         1.0 / (n * n * (if ((index + 1) % 2 = 0) then 1.0 else -1.0)))
 
-seqInfinite |> Seq.iter (fun el -> printfn $"{el}") // Prints elements from infinite Seq
+seqInfinite |> Seq.iter (fun el -> printfn $"{el}") // Prints elements from infinite sequence
 ```
 
 ## Monoid
@@ -563,31 +568,31 @@ The identity value for addition is `0`.
 ```fs
 1 + 0 // 1
 0 + 1 // 1
-1 + 0 === 0 + 1
+1 + 0 = 0 + 1 // true
 ```
 
 It's also required that the grouping of operations will not affect the result (associativity):
 
 ```fs
-1 + (2 + 3) === (1 + 2) + 3 // true
+1 + (2 + 3) = (1 + 2) + 3 // true
 ```
 
 Array concatenation also forms a monoid:
 
 ```fs
-;[1, 2].concat([3, 4]) // [1, 2, 3, 4]
+[1; 2] @ [3; 4] // [1, 2, 3, 4]
 ```
 
 The identity value is empty array `[]`
 
 ```fs
-;[1, 2].concat([]) // [1, 2]
+[1; 2] @ [] // [1, 2]
 ```
 
 As a counterexample, subtraction does not form a monoid because there is no commutative identity value:
 
 ```fs
-0 - 4 === 4 - 0 // false
+0 - 4 = 4 - 0 // false
 ```
 
 ## Monad
@@ -596,46 +601,40 @@ A monad is an object with [`of`](#pointed-functor) and `chain` functions. `chain
 
 ```fs
 // Implementation
-Array.prototype.chain = function (f) {
-  return this.reduce((acc, it) => acc.concat(f(it)), [])
-}
+type ListMonad(list: string list) =  
+    member this.list = list
+    static member Of (list) = new ListMonad(list)
+    member this.Chain fn = ([], this.list) ||> List.fold (fun acc el -> acc @ (fn el))  
 
 // Usage
-Array.of('cat,dog', 'fish,bird').chain((a) => a.split(',')) // ['cat', 'dog', 'fish', 'bird']
-
-// Contrast to map
-Array.of('cat,dog', 'fish,bird').map((a) => a.split(',')) // [['cat', 'dog'], ['fish', 'bird']]
+ListMonad.Of(["cat,dog"; "fish,bird"]).Chain(fun el -> el.Split(",") |> Array.toList) // ['cat', 'dog', 'fish', 'bird']
 ```
 
-`of` is also known as `return` in other functional languages.
-`chain` is also known as `flatmap` and `bind` in other languages.
+The function `of` is is sometimes replaced with `return` in other functional languages. The function `chain` is also known as `flatmap` and `bind` in other languages.
 
 ## Comonad
 
 An object that has `extract` and `extend` functions.
 
 ```fs
-let CoIdentity = (v) => ({
-  val: v,
-  extract () {
-    return this.val
-  },
-  extend (f) {
-    return CoIdentity(f(this))
-  }
-})
-```
+type Comonad<'a> =
+    abstract value: 'a
+    abstract extract: unit -> 'a
+    abstract extend : (Comonad<'a> -> 'a) -> Comonad<'a>
 
-Extract takes a value out of a functor.
+let rec CoIdentity = fun v -> {
+    new Comonad<'a> with
+        member this.value = v
+        member this.extract () = this.value 
+        member this.extend fn = CoIdentity (fn this) }
 
-```fs
-CoIdentity(1).extract() // 1
-```
+let extend fn x = CoIdentity (x |> fn)
 
-Extend runs a function on the comonad. The function should return the same type as the comonad.
+// Extract takes a value out of a functor.
+CoIdentity(1).extract()
 
-```fs
-CoIdentity(1).extend((co) => co.extract() + 1) // CoIdentity(2)
+// Extend runs a function on the comonad. The function should return the same type as the comonad.
+CoIdentity(1).extend (fun (co: Comonad<'a>) -> co.extract () + 1) // CoIdentity(2)
 ```
 
 ## Applicative Functor
@@ -713,27 +712,27 @@ coordsToPair {X = 1; Y = 2} |> pairToCoords // {X = 1; Y = 2}
 
 A homomorphism is just a structure preserving map. In fact, a functor is just a homomorphism between categories as it preserves the original category's structure under the mapping.
 
-```fs
+<!-- ```fs
 A.of(f).ap(A.of(x)) == A.of(f(x))
 
 Either.of(_.toUpper).ap(Either.of('oreos')) == Either.of(_.toUpper('oreos'))
-```
+``` -->
 
 ### Catamorphism
 
-A `reduceRight` function that applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
+A `reduceRight`-like function that applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
 
-```fs
-let sum = xs => xs.reduceRight((acc, x) => acc + x, 0)
+<!-- ```fs
+let sum = fun xs -> xs |> Seq.reduce (fun acc x -> acc + x) 
 
-sum([1, 2, 3, 4, 5]) // 15
-```
+sum([1; 2; 3; 4; 5]) // 15
+``` -->
 
 ### Anamorphism
 
 An `unfold` function. An `unfold` is the opposite of `fold` (`reduce`). It generates a list from a single value.
 
-```fs
+<!-- ```fs
 let unfold = (f, seed) => {
   function go (f, seed, acc) {
     let res = f(seed)
@@ -749,7 +748,7 @@ let countDown = n => unfold((n) => {
 }, n)
 
 countDown(5) // [5, 4, 3, 2, 1]
-```
+``` -->
 
 ### Hylomorphism
 
@@ -761,7 +760,7 @@ A function just like `reduceRight`. However, there's a difference:
 
 In paramorphism, your reducer's arguments are the current value, the reduction of all previous values, and the list of values that formed that reduction.
 
-```fs
+<!-- ```fs
 // Obviously not safe for lists containing `undefined`,
 // but good enough to make the point.
 let para = (reducer, accumulator, elements) => {
@@ -780,9 +779,9 @@ let suffixes = list => para(
 )
 
 suffixes([1, 2, 3, 4, 5]) // [[2, 3, 4, 5], [3, 4, 5], [4, 5], [5], []]
-```
+``` -->
 
-The third parameter in the reducer (in the above example, `[x, ... xs]`) is kind of like having a history of what got you to your current acc value.
+<!-- The third parameter in the reducer (in the above example, `[x, ... xs]`) is kind of like having a history of what got you to your current acc value. -->
 
 ### Apomorphism
 
@@ -795,21 +794,8 @@ An object that has an `equals` function which can be used to compare other objec
 Make array a setoid:
 
 ```fs
-Array.prototype.equals = function (arr) {
-  let len = this.length
-  if (len !== arr.length) {
-    return false
-  }
-  for (let i = 0; i < len; i++) {
-    if (this[i] !== arr[i]) {
-      return false
-    }
-  }
-  return true
-}
-
-;[1, 2].equals([1, 2]) // true
-;[1, 2].equals([0]) // false
+"Foo".Equals("Foo") // true
+[1; 2] = [1; 2; 3] // false
 ```
 
 ## Semigroup
@@ -817,7 +803,7 @@ Array.prototype.equals = function (arr) {
 An object that has a `concat` function that combines it with another object of the same type.
 
 ```fs
-;[1].concat([2]) // [1, 2]
+[1] @ [2] // [1, 2]
 ```
 
 ## Foldable
@@ -825,8 +811,8 @@ An object that has a `concat` function that combines it with another object of t
 An object that has a `reduce` function that applies a function against an accumulator and each element in the array (from left to right) to reduce it to a single value.
 
 ```fs
-let sum = (list) => list.reduce((acc, val) => acc + val, 0)
-sum([1, 2, 3]) // 6
+let accumulate total currentElement = total + currentElement
+[1; 2; 3] |> List.fold accumulate 0 // 6
 ```
 
 ## Lens ##
@@ -875,9 +861,6 @@ let people = [{name: 'Gertrude Blanch'}, {name: 'Shafi Goldwasser'}]
 R.over(compose(firstLens, nameLens), uppercase, people) // [{'name': 'GERTRUDE BLANCH'}, {'name': 'Shafi Goldwasser'}]
 ```
 
-Other implementations:
-* [partial.lenses](https://github.com/calmm-js/partial.lenses) - Tasty syntax sugar and a lot of powerful features
-* [nanoscope](http://www.kovach.me/nanoscope/) - Fluent-interface
 
 ## Type Signatures
 
@@ -1008,38 +991,22 @@ Partial functions are dangerous as they need to be treated with great caution. Y
 Fortunately a partial function can be converted to a regular (or total) one. We can provide default values or use guards to deal with inputs for which the (previously) partial function is undefined. Utilizing the [`Option`](#Option) type, we can yield either `Some(value)` or `None` where we would otherwise have behaved unexpectedly:
 
 ```fs
-// example 1: sum of the list
-// we can provide default value so it will always return result
-// sum :: [Number] -> Number
-let sum = arr => arr.reduce((a, b) => a + b, 0)
-sum([1, 2, 3]) // 6
-sum([]) // 0
+// Example 1: Handle the empty list so the function will always return a result
+let sum (values: int list) = 
+    match values with
+    | [] -> 0
+    | _ -> values |> List.reduce (fun a  b -> a + b)
 
-// example 2: get the first item in list
-// change result to Option
-// first :: [A] -> Option A
-let first = a => a.length ? Some(a[0]) : None()
-first([42]).map(a => console.log(a)) // 42
-first([]).map(a => console.log(a)) // console.log won't execute at all
-// our previous worst case
-first([[42]]).map(a => console.log(a[0])) // 42
-first([]).map(a => console.log(a[0])) // won't execte, so we won't have error here
-// more of that, you will know by function return type (Option)
-// that you should use `.map` method to access the data and you will never forget
-// to check your input because such check become built-in into the function
+sum [1; 2; 3] // 6
+sum [] // 0
 
-// example 3: repeat function N times
-// we should make function always terminate by changing conditions:
-// times :: Number -> (Number -> Number) -> Number
-let times = n => fn => n > 0 && (fn(n), times(n - 1)(fn))
-times(3)(console.log)
-// 3
-// 2
-// 1
-times(-1)(console.log)
-// won't execute anything
+
+// Example 2: Get the first item in a list, wrapped in an int option.
+let first = fun (a: int list) -> if a.Length > 0 then Some a.Head else None
+first [42; 43]  // Some 42
+first [] // None
 ```
 
-Making your partial functions total ones, these kinds of runtime errors can be prevented. Always returning a value will also make for code that is both easier to maintain as well as to reason about.
+By converting our partial functions total function, we can avoid certain types of runtime errors. Always returning a value will also make for code that is both easier to maintain as well as to reason about.
 
 ---
