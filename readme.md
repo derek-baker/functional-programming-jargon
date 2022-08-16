@@ -542,7 +542,6 @@ In functional languages, lazy evaluation allows for structures like infinite lis
 
 ```fs
 // Example source: https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/sequences#code-try-15
-
 let seqInfinite =
     Seq.initInfinite (fun index ->
         let n = float (index + 1)
@@ -643,12 +642,12 @@ An applicative functor is an object with an `ap` function. `ap` applies a functi
 
 ```fs
 // Implementation
-Array.prototype.ap = function (xs) {
-  return this.reduce((acc, f) => acc.concat(xs.map(f)), [])
-}
+type ListLike(fnList: 'a list) =
+    member this.fnList = fnList
+    member this.ap apTarget = ([], this.fnList) ||> List.fold (fun (acc: int list) fn -> acc @ (apTarget |> List.map fn))
 
-// Example usage
-;[(a) => a + 1].ap([1]) // [2]
+// Usage
+ListLike([(fun a -> a + 1)]).ap([1]) // [2]
 ```
 
 This is useful if you have two objects and you want to apply a binary function to their contents.
