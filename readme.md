@@ -449,33 +449,27 @@ Seq.ofList [1; 2; 3] // {1, 2, 3}
 
 Lifting is when you take a value and put it into an object like a [functor](#pointed-functor). If you lift a function into an [Applicative Functor](#applicative-functor) then you can make it work on values that are also in that functor.
 
-Some implementations have a function called `lift`, or `liftA2` to make it easier to run functions on functors.
-
 ```fs
-let liftA2 = (f) => (a, b) => a.map(f).ap(b) // note it's `ap` and not `map`.
+// Example source: https://stackoverflow.com/questions/53028716/lifting-a-function#answer-53029089
 
-let mult = a => b => a * b
+(* 
+  "In simple terms, the idea of lifting refers to taking a 
+  function f that works with a simple type and creating a 
+  new version liftedF that works with a generic type. How do 
+  we do this? We take the function f pass it to another 
+  function and it returns a "new and improved" version of f. 
+*)
 
-let liftedMult = liftA2(mult) // this function now works on functors like array
+// int -> int
+let square x = x * x    
 
-liftedMult([1, 2], [3]) // [3, 6]
-liftA2(a => b => a + b)([1, 2], [3, 4]) // [4, 5, 5, 6]
+// int [] -> int []
+let squareArray xA = Array.map square xA  
 ```
 
-Lifting a one-argument function and applying it does the same thing as `map`.
+__Further reading__
+* [Elevated World](http://fsharpforfunandprofit.com/posts/elevated-world/)
 
-```fs
-let increment = (x) => x + 1
-
-lift(increment)([2]) // [3]
-;[2].map(increment) // [3]
-```
-
-Lifting simple values can be simply creating the object.
-
-```fs
-Array.of(1) // => [1]
-```
 
 ## Referential Transparency
 
@@ -642,18 +636,27 @@ An applicative functor is an object with an `ap` function. `ap` applies a functi
 
 ```fs
 // Implementation
-type ListLike(fnList: 'a list) =
-    member this.fnList = fnList
-    member this.ap apTarget = ([], this.fnList) ||> List.fold (fun (acc: int list) fn -> acc @ (apTarget |> List.map fn))
+type ApplicativeFunctor<'a, 'b>(fnList: list<'a -> 'b>) =
+    member private this.fnList = fnList
+    member this.ap apTarget = 
+        ([], this.fnList) ||> List.fold (fun acc fn -> acc @ (apTarget |> List.map fn))
 
 // Usage
-ListLike([(fun a -> a + 1)]).ap([1]) // [2]
+let add1 a = a + 1
+ApplicativeFunctor([add1]).ap([1]) // [2]
+
+// Lists that you want to combine
+let arg1 = [1; 3]
+
+// Combining function - must be curried for this to work
+let add x = fun y -> x + y
+
+let partiallyAppliedAdds = ApplicativeFunctor[add].ap(arg1) // [(y) => 1 + y, (y) => 3 + y]
 ```
 
-This is useful if you have two objects and you want to apply a binary function to their contents.
+<!-- This is useful if you have two objects and you want to apply a binary function to their contents.
 
 ```fs
-// Arrays that you want to combine
 let arg1 = [1, 3]
 let arg2 = [4, 5]
 
@@ -667,7 +670,7 @@ This gives you an array of functions that you can call `ap` on to get the result
 
 ```fs
 partiallyAppliedAdds.ap(arg2) // [5, 6, 7, 8]
-```
+``` -->
 
 ## Morphism
 
@@ -818,46 +821,63 @@ let accumulate total currentElement = total + currentElement
 A lens is a structure (often an object or function) that pairs a getter and a non-mutating setter for some other data
 structure.
 
+
+The example below was sourced from: https://fsprojects.github.io/FSharpPlus/lens.html
 ```fs
-// Using [Ramda's lens](http://ramdajs.com/docs/#lens)
-let nameLens = R.lens(
-  // getter for name property on an object
-  (obj) => obj.name,
-  // setter for name property
-  (val, obj) => Object.assign({}, obj, {name: val})
-)
-```
+open System
+open FSharpPlus
+open FSharpPlus.Lens
 
-Having the pair of get and set for a given data structure enables a few key features.
+// From Mauricio Scheffer: https://gist.github.com/mausch/4260932
+type Person = 
+    { Name: string
+      DateOfBirth: DateTime }
 
-```fs
-let person = {name: 'Gertrude Blanch'}
+module Person =
+    let inline _name f p =
+        f p.Name <&> fun x -> { p with Name = x }
 
-// invoke the getter
-R.view(nameLens, person) // 'Gertrude Blanch'
+type Page =
+    { Contents: string }
 
-// invoke the setter
-R.set(nameLens, 'Shafi Goldwasser', person) // {name: 'Shafi Goldwasser'}
+module Page =
+    let inline _contents f p =
+        f p.Contents <&> fun x -> {p with Contents = x}
 
-// run a function on the value in the structure
-R.over(nameLens, uppercase, person) // {name: 'GERTRUDE BLANCH'}
-```
+type Book = 
+    { Title: string
+      Author: Person 
+      Pages: Page list }
 
-Lenses are also composable. This allows easy immutable updates to deeply nested data.
+module Book =
+    let inline _author f b =
+        f b.Author <&> fun a -> { b with Author = a }
 
-```fs
-// This lens focuses on the first item in a non-empty array
-let firstLens = R.lens(
-  // get first item in array
-  xs => xs[0],
-  // non-mutating setter for first item in array
-  (val, [__, ...xs]) => [val, ...xs]
-)
+    let inline _authorName b = _author << Person._name <| b
 
-let people = [{name: 'Gertrude Blanch'}, {name: 'Shafi Goldwasser'}]
+    let inline _pages f b =
+        f b.Pages <&> fun p -> { b with Pages = p }
 
-// Despite what you may assume, lenses compose left-to-right.
-R.over(compose(firstLens, nameLens), uppercase, people) // [{'name': 'GERTRUDE BLANCH'}, {'name': 'Shafi Goldwasser'}]
+    let inline _pageNumber i b =
+        _pages << List._item i << _Some <| b
+
+let rayuela =
+    { Book.Title = "Rayuela"
+      Author = { Person.Name = "Julio Cortázar"
+                 DateOfBirth = DateTime(1914, 8, 26) } 
+      Pages = [
+        { Contents = "Once upon a time" }
+        { Contents = "The End"} ] }
+    
+// read book author name:
+let authorName1 = view Book._authorName rayuela
+//  you can also write the read operation as:
+let authorName2 = rayuela ^. Book._authorName
+
+// write value through a lens
+let book1 = setl Book._authorName "William Shakespear" rayuela
+// update value
+let book2 = over Book._authorName String.toUpper rayuela
 ```
 
 
