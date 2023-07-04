@@ -901,7 +901,7 @@ let call: ('a -> 'b) -> 'a -> 'b = fun f ->
     f x
 ```
 
-In the example above, the annotations `'a`, `'b`, `'c`, and `'d` are used to signify that the argument can be of any type. 
+In the example above, the annotations `'a`, and `'b` are used to signify that the argument can be of any type. 
 
 In the example below, the following version of `map` takes a function that transforms a value of some type `a` into another type `b`, an list of values of type `a`, and returns an list of values of type `b`.
 
